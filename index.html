@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Planner Cantieri Hyle</title>
+
+<style>
+
+body{
+background:#0f172a;
+color:white;
+font-family:Arial;
+padding:30px;
+}
+
+h1{color:#38bdf8}
+
+.panel{
+background:#1e293b;
+padding:20px;
+border-radius:12px;
+margin-bottom:20px;
+}
+
+.cantiere{
+background:#334155;
+padding:15px;
+border-radius:10px;
+margin-bottom:10px;
+}
+
+.operaio{
+background:#475569;
+padding:6px 10px;
+border-radius:6px;
+display:inline-block;
+margin:3px;
+cursor:grab;
+}
+
+button{
+background:#38bdf8;
+border:none;
+padding:8px 14px;
+border-radius:6px;
+cursor:pointer;
+}
+
+#chat{
+background:#020617;
+height:260px;
+overflow:auto;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
+}
+
+.msg{
+margin-bottom:10px;
+}
+
+.ai{
+color:#38bdf8;
+}
+
+.autorizza{
+background:#22c55e;
+margin-top:6px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Planner Cantieri Hyle</h1>
+
+<div class="panel">
+
+<h3>Aggiungi Cantiere</h3>
+
+<input id="nomeCantiere" placeholder="Nome cantiere">
+
+<button onclick="aggiungiCantiere()">Aggiungi</button>
+
+</div>
+
+
+<div class="panel">
+
+<h3>Pool Operai</h3>
+
+<div id="pool"></div>
+
+<button onclick="generaOperai()">Genera Operai</button>
+
+</div>
+
+
+<div class="panel">
+
+<h3>Cantieri</h3>
+
+<div id="cantieri"></div>
+
+</div>
+
+
+<div class="panel">
+
+<h3>Chat AI</h3>
+
+<input id="groqKey" placeholder="Groq API Key">
+
+<button onclick="salvaKey()">Salva Key</button>
+
+<div id="chat"></div>
+
+<input id="msgInput" placeholder="Scrivi messaggio..." style="width:70%">
+
+<button onclick="mandaMessaggio()">Invia</button>
+
+</div>
+
+
+<script>
+
+let pool=[]
+let cantieri=[]
+let tipiOperai=["montatore","saldatore","elettricista","manovale"]
+
+let GROQ_KEY=localStorage.getItem("groqKey")||""
+
+let azioneProposta=null
+
+
+function salvaStorage(){
+
+localStorage.setItem("pool",JSON.stringify(pool))
+localStorage.setItem("cantieri",JSON.stringify(cantieri))
+
+}
+
+
+function caricaStorage(){
+
+let p=localStorage.getItem("pool")
+let c=localStorage.getItem("cantieri")
+
+if(p) pool=JSON.parse(p)
+if(c) cantieri=JSON.parse(c)
+
+}
+
+
+function render(){
+
+const poolDiv=document.getElementById("pool")
+poolDiv.innerHTML=""
+
+pool.forEach((o,i)=>{
+
+let div=document.createElement("div")
+
+div.className="operaio"
+div.innerText=o.skill
+div.draggable=true
+
+div.ondragstart=e=>{
+
+e.dataTransfer.setData("operaio",i)
+
+}
+
+poolDiv.appendChild(div)
+
+})
+
+
+const cantieriDiv=document.getElementById("cantieri")
+cantieriDiv.innerHTML=""
+
+cantieri.forEach((c,index)=>{
+
+let div=document.createElement("div")
+
+div.className="cantiere"
+
+div.innerHTML="<b>"+c.nome+"</b><br>"
+
+div.ondragover=e=>e.preventDefault()
+
+div.ondrop=e=>{
+
+const id=e.dataTransfer.getData("operaio")
+
+const op=pool.splice(id,1)[0]
+
+c.operai.push(op)
+
+render()
+
+salvaStorage()
+
+}
+
+c.operai.forEach(o=>{
+
+let op=document.createElement("div")
+
+op.className="operaio"
+
+op.innerText=o.skill
+
+div.appendChild(op)
+
+})
+
+cantieriDiv.appendChild(div)
+
+})
+
+}
+
+
+
+function generaOperai(){
+
+for(let i=0;i<6;i++){
+
+let tipo=tipiOperai[Math.floor(Math.random()*tipiOperai.length)]
+
+pool.push({skill:tipo})
+
+}
+
+render()
+
+salvaStorage()
+
+}
+
+
+
+function aggiungiCantiere(){
+
+let nome=document.getElementById("nomeCantiere").value
+
+cantieri.push({
+nome:nome,
+operai:[]
+})
+
+render()
+
+salvaStorage()
+
+}
+
+
+
+function addAIMessage(text,autorizza=false){
+
+const chat=document.getElementById("chat")
+
+let div=document.createElement("div")
+
+div.className="msg ai"
+
+div.innerHTML=text
+
+if(autorizza){
+
+let btn=document.createElement("button")
+
+btn.innerText="AUTORIZZA"
+
+btn.className="autorizza"
+
+btn.onclick=eseguiAzioneAgente
+
+div.appendChild(document.createElement("br"))
+
+div.appendChild(btn)
+
+}
+
+chat.appendChild(div)
+
+chat.scrollTop=chat.scrollHeight
+
+}
+
+
+
+function agenteAnalizza(){
+
+if(azioneProposta) return
+
+for(let c of cantieri){
+
+if(c.operai.length===0 && pool.length>0){
+
+azioneProposta={
+
+tipo:"assegna",
+cantiere:c
+
+}
+
+addAIMessage(
+
+"⚠️ "+c.nome+" è senza operai.<br>Propongo di mandarne uno.",
+
+true
+
+)
+
+return
+
+}
+
+}
+
+}
+
+
+
+function eseguiAzioneAgente(){
+
+if(!azioneProposta) return
+
+let c=azioneProposta.cantiere
+
+let op=pool.shift()
+
+c.operai.push(op)
+
+render()
+
+salvaStorage()
+
+addAIMessage("✅ Operaio mandato a "+c.nome)
+
+azioneProposta=null
+
+}
+
+
+
+setInterval(()=>{
+
+if(Math.random()<0.7){
+
+agenteAnalizza()
+
+}
+
+},20000)
+
+
+
+async function mandaMessaggio(){
+
+let msg=document.getElementById("msgInput").value
+
+addAIMessage("Tu: "+msg)
+
+if(!GROQ_KEY) return
+
+let res=await fetch(
+
+"https://api.groq.com/openai/v1/chat/completions",
+
+{
+
+method:"POST",
+
+headers:{
+
+"Authorization":"Bearer "+GROQ_KEY,
+
+"Content-Type":"application/json"
+
+},
+
+body:JSON.stringify({
+
+model:"llama-3.3-70b-versatile",
+
+messages:[
+
+{role:"system",content:"Assistente gestione cantieri"},
+
+{role:"user",content:msg}
+
+]
+
+})
+
+}
+
+)
+
+let data=await res.json()
+
+addAIMessage(data.choices[0].message.content)
+
+}
+
+
+
+function salvaKey(){
+
+GROQ_KEY=document.getElementById("groqKey").value
+
+localStorage.setItem("groqKey",GROQ_KEY)
+
+addAIMessage("🔑 Key salvata")
+
+}
+
+
+
+caricaStorage()
+
+render()
+
+</script>
+
+</body>
+
+</html>
