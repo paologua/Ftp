@@ -1,437 +1,1163 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Planner Cantieri Hyle</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cantieri · Con AI</title>
 <style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 1.5rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .dashboard {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 1.5rem;
+    overflow: hidden;
+  }
 
-body{
-background:#0f172a;
-color:white;
-font-family:Arial;
-padding:30px;
-}
+  /* HEADER */
+  .app-header {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border-radius: 24px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
+    margin-bottom: 0.5rem;
+  }
+  
+  .app-title {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #0f172a;
+  }
+  
+  .save-status {
+    font-size: 0.7rem;
+    color: #059669;
+    background: #e0f2fe;
+    padding: 0.3rem 1rem;
+    border-radius: 30px;
+  }
 
-h1{color:#38bdf8}
+  /* CANTIERI SECTION */
+  .cantieri-section {
+    background: white;
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
+    overflow-y: auto;
+    height: 100%;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .section-title {
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
 
-.panel{
-background:#1e293b;
-padding:20px;
-border-radius:12px;
-margin-bottom:20px;
-}
+  .cantiere-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+    background: #f8fafc;
+    transition: background-color 0.1s;
+  }
+  
+  .cantiere-card.drag-over {
+    background: #e0f2fe;
+    border: 2px dashed #2563eb;
+  }
 
-.cantiere{
-background:#334155;
-padding:15px;
-border-radius:10px;
-margin-bottom:10px;
-}
+  .cantiere-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .cantiere-nome-input {
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 30px;
+    background: white;
+    min-width: 140px;
+  }
+  
+  .cantiere-localita-input {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 30px;
+    background: white;
+    min-width: 120px;
+  }
 
-.operaio{
-background:#475569;
-padding:6px 10px;
-border-radius:6px;
-display:inline-block;
-margin:3px;
-cursor:grab;
-}
+  /* Operai nei cantieri */
+  .cantieri-operai {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 0.8rem;
+    padding: 0.5rem 0;
+    min-height: 50px;
+  }
+  
+  .tipo-icona {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 0.5rem 0.8rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 40px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    cursor: grab;
+    user-select: none;
+    transition: all 0.1s;
+  }
+  
+  .tipo-icona:active {
+    cursor: grabbing;
+    opacity: 0.8;
+  }
+  
+  .tipo-icona.dragging {
+    opacity: 0.3;
+  }
+  
+  .tipo-colore {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+  
+  .tipo-nome {
+    font-weight: 500;
+    font-size: 0.8rem;
+  }
+  
+  .tipo-numero {
+    font-weight: 700;
+    font-size: 1rem;
+    min-width: 24px;
+    text-align: center;
+    background: #f1f5f9;
+    padding: 0.2rem 0.4rem;
+    border-radius: 20px;
+  }
 
-button{
-background:#38bdf8;
-border:none;
-padding:8px 14px;
-border-radius:6px;
-cursor:pointer;
-}
+  /* POOL OPERAI */
+  .personale-section {
+    background: white;
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
 
-#chat{
-background:#020617;
-height:260px;
-overflow:auto;
-padding:10px;
-border-radius:10px;
-margin-top:10px;
-}
+  .stats-totali {
+    background: #f1f5f9;
+    border-radius: 18px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+  }
 
-.msg{
-margin-bottom:10px;
-}
+  .pool-container {
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 1rem;
+    min-height: 200px;
+    border: 2px dashed #2563eb;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+  }
+  
+  .pool-container.drag-over {
+    background: #e0f2fe;
+    border-color: #059669;
+  }
 
-.ai{
-color:#38bdf8;
-}
+  .pool-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+    color: #475569;
+  }
 
-.autorizza{
-background:#22c55e;
-margin-top:6px;
-}
+  /* Tipi draggabili */
+  .pool-types {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .pool-type {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 50px;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.1s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .pool-type:active {
+    cursor: grabbing;
+    opacity: 0.8;
+  }
+  
+  .pool-type.dragging {
+    opacity: 0.3;
+  }
+  
+  .pool-type-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+  }
+  
+  .pool-type-name {
+    font-weight: 600;
+    font-size: 1rem;
+    min-width: 100px;
+  }
+  
+  .pool-type-count {
+    font-weight: 700;
+    font-size: 1.2rem;
+    min-width: 40px;
+    text-align: center;
+    color: #0f172a;
+  }
+  
+  .pool-type-controls {
+    display: flex;
+    gap: 0.3rem;
+    margin-left: auto;
+  }
+  
+  .pool-type-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 30px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .pool-type-btn:hover {
+    background: #e0f2fe;
+    border-color: #2563eb;
+  }
+  
+  .pool-type-btn.minus {
+    color: #dc2626;
+  }
+  
+  .pool-type-btn.plus {
+    color: #059669;
+  }
+  
+  .pool-type-btn.delete {
+    color: #dc2626;
+    background: #fee2e2;
+    border-color: #dc2626;
+    width: auto;
+    padding: 0 0.8rem;
+    font-size: 0.7rem;
+  }
+  
+  .pool-type-btn.delete:hover {
+    background: #fecaca;
+  }
+  
+  .pool-type-drag {
+    font-size: 0.65rem;
+    color: #2563eb;
+    background: #e0f2fe;
+    padding: 0.2rem 0.8rem;
+    border-radius: 30px;
+  }
 
+  /* Aggiunta nuovi tipi */
+  .add-tipo {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f1f5f9;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  
+  .add-tipo-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .add-tipo-inputs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .add-tipo-input {
+    flex: 1;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 30px;
+    font-size: 0.8rem;
+  }
+  
+  .add-tipo-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .add-tipo-btn:hover {
+    background: #1d4ed8;
+  }
+
+  /* CHAT AI (in basso a destra, fissa) */
+  .ai-chat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border: 1px solid #e2e8f0;
+    z-index: 1000;
+    overflow: hidden;
+  }
+  
+  .ai-header {
+    background: #0f172a;
+    color: white;
+    padding: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .ai-messages {
+    height: 200px;
+    overflow-y: auto;
+    padding: 12px;
+    background: #f8fafc;
+    font-size: 0.8rem;
+  }
+  
+  .ai-message {
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    max-width: 85%;
+    word-wrap: break-word;
+  }
+  
+  .ai-message.user {
+    background: #2563eb;
+    color: white;
+    margin-left: auto;
+  }
+  
+  .ai-message.assistant {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  
+  .ai-input-area {
+    display: flex;
+    padding: 10px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .ai-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 30px;
+    font-size: 0.8rem;
+  }
+  
+  .ai-input:focus {
+    outline: none;
+    border-color: #2563eb;
+  }
+  
+  .ai-send {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 8px 12px;
+    margin-left: 8px;
+    cursor: pointer;
+    font-size: 0.7rem;
+  }
+  
+  .ai-send:hover {
+    background: #1d4ed8;
+  }
+  
+  .ai-minimized .ai-messages,
+  .ai-minimized .ai-input-area {
+    display: none;
+  }
+
+  .libertotale {
+    margin-top: 1rem;
+    background: #e0f2fe;
+    padding: 0.8rem 1rem;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .drag-note {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 0.8rem;
+    background: #f1f5f9;
+    padding: 0.5rem 1rem;
+    border-radius: 30px;
+    flex-shrink: 0;
+  }
 </style>
-
 </head>
-
 <body>
 
-<h1>Planner Cantieri Hyle</h1>
+<div class="dashboard">
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="app-title">🏗️ CANTIERI · GESTIONE OPERAI</div>
+    <span class="save-status" id="saveStatus">💾 Salvato</span>
+  </div>
 
-<div class="panel">
+  <!-- COLONNA SINISTRA: CANTIERI -->
+  <div class="cantieri-section">
+    <div class="section-header">
+      <span class="section-title">🏗️ CANTIERI</span>
+      <button class="btn-icon" onclick="aggiungiCantiere()">+ NUOVO CANTIERE</button>
+    </div>
+    <div id="cantieriContainer"></div>
+  </div>
 
-<h3>Aggiungi Cantiere</h3>
+  <!-- COLONNA DESTRA: POOL OPERAI -->
+  <div class="personale-section">
+    <div class="section-title">👥 POOL OPERAI</div>
+    
+    <div class="stats-totali">
+      <span>Organico: <span id="totale-organico">0</span></span>
+      <span>Assegnati: <span id="totale-assegnati">0</span></span>
+    </div>
 
-<input id="nomeCantiere" placeholder="Nome cantiere">
+    <div class="drag-note">
+      🖱️ Trascina le icone · +/- per quantità · 🗑️ elimina categoria
+    </div>
 
-<button onclick="aggiungiCantiere()">Aggiungi</button>
+    <div class="pool-container" id="poolContainer" ondragover="handleDragOver(event)" ondrop="dropOnPool(event)">
+      <div class="pool-title">📊 TIPI OPERAI (DRAGGABILI)</div>
+      
+      <!-- Tipi draggabili con conteggio, pulsanti + - e elimina -->
+      <div class="pool-types" id="poolTypes"></div>
 
+      <!-- Sezione aggiungi nuovo tipo -->
+      <div class="add-tipo">
+        <div class="add-title">➕ AGGIUNGI NUOVO TIPO OPERAIO</div>
+        <div class="add-tipo-form">
+          <div class="add-tipo-inputs">
+            <input type="text" class="add-tipo-input" id="nuovoTipoNome" placeholder="es. Carpentieri">
+          </div>
+          <button class="add-tipo-btn" onclick="aggiungiNuovoTipo()">CREA NUOVO TIPO</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="libertotale" id="libertotale">
+      👥 Calcolo...
+    </div>
+  </div>
 </div>
 
-
-<div class="panel">
-
-<h3>Pool Operai</h3>
-
-<div id="pool"></div>
-
-<button onclick="generaOperai()">Genera Operai</button>
-
+<!-- CHAT AI (fissa in basso a destra) -->
+<div class="ai-chat" id="aiChat">
+  <div class="ai-header" onclick="toggleChat()">
+    <span>🤖 Assistente AI</span>
+    <span id="aiToggle">▼</span>
+  </div>
+  <div class="ai-messages" id="aiMessages">
+    <div class="ai-message assistant">Ciao! Chiedimi qualcosa sui cantieri o parliamo di qualsiasi cosa.</div>
+  </div>
+  <div class="ai-input-area">
+    <input type="text" class="ai-input" id="aiInput" placeholder="Scrivi un messaggio...">
+    <button class="ai-send" onclick="sendAIMessage()">Invia</button>
+  </div>
 </div>
-
-
-<div class="panel">
-
-<h3>Cantieri</h3>
-
-<div id="cantieri"></div>
-
-</div>
-
-
-<div class="panel">
-
-<h3>Chat AI</h3>
-
-<input id="groqKey" placeholder="Groq API Key">
-
-<button onclick="salvaKey()">Salva Key</button>
-
-<div id="chat"></div>
-
-<input id="msgInput" placeholder="Scrivi messaggio..." style="width:70%">
-
-<button onclick="mandaMessaggio()">Invia</button>
-
-</div>
-
 
 <script>
+  // ==================== STATO INIZIALE ====================
+  const SKILLS = [
+    { key: 'mont', nome: 'Montatori', colore: '#3b82f6' },
+    { key: 'sald', nome: 'Saldatori', colore: '#ef4444' },
+    { key: 'elett', nome: 'Elettricisti', colore: '#f97316' },
+    { key: 'posa', nome: 'Posatori', colore: '#10b981' },
+    { key: 'man', nome: 'Manovali', colore: '#8b5cf6' }
+  ];
 
-let pool=[]
-let cantieri=[]
-let tipiOperai=["montatore","saldatore","elettricista","manovale"]
+  // Mappa sinonimi
+  const SKILL_SYNONYMS = {
+    'montatore': 'mont', 'montatori': 'mont', 'muratore': 'mont', 'muratori': 'mont',
+    'saldatore': 'sald', 'saldatori': 'sald',
+    'elettricista': 'elett', 'elettricisti': 'elett',
+    'posatore': 'posa', 'posatori': 'posa',
+    'manovale': 'man', 'manovali': 'man'
+  };
 
-let GROQ_KEY=localStorage.getItem("groqKey")||""
+  // Pool operai
+  let pool = [];
+  let cantieri = [
+    { id: 0, nome: 'Stazione MM', localita: 'Milano', operai: [] },
+    { id: 1, nome: 'Deposito AT', localita: 'Torino', operai: [] },
+    { id: 2, nome: 'Linea Alta Tensione', localita: 'Genova', operai: [] }
+  ];
 
-let azioneProposta=null
+  // Inizializza pool
+  SKILLS.forEach(skill => {
+    for (let i = 0; i < 5; i++) {
+      pool.push({
+        id: `pool-${skill.key}-${i}`,
+        skillKey: skill.key,
+        skillNome: skill.nome,
+        colore: skill.colore
+      });
+    }
+  });
 
+  // Aggiungi operai di test
+  for (let i = 0; i < 3; i++) {
+    const operaio = pool.find(op => op.skillKey === 'mont');
+    if (operaio) {
+      pool = pool.filter(op => op.id !== operaio.id);
+      cantieri[0].operai.push(operaio);
+    }
+  }
+  for (let i = 0; i < 2; i++) {
+    const operaio = pool.find(op => op.skillKey === 'sald');
+    if (operaio) {
+      pool = pool.filter(op => op.id !== operaio.id);
+      cantieri[0].operai.push(operaio);
+    }
+  }
+  for (let i = 0; i < 2; i++) {
+    const operaio = pool.find(op => op.skillKey === 'elett');
+    if (operaio) {
+      pool = pool.filter(op => op.id !== operaio.id);
+      cantieri[1].operai.push(operaio);
+    }
+  }
 
-function salvaStorage(){
+  let nextId = 3;
+  let draggedData = null;
 
-localStorage.setItem("pool",JSON.stringify(pool))
-localStorage.setItem("cantieri",JSON.stringify(cantieri))
+  // ==================== FUNZIONI CALCOLO ====================
+  function totaleAssegnati() {
+    return cantieri.reduce((acc, c) => acc + c.operai.length, 0);
+  }
 
+  function getPoolCounts() {
+    const counts = {};
+    SKILLS.forEach(s => counts[s.key] = 0);
+    pool.forEach(op => counts[op.skillKey]++);
+    return counts;
+  }
+
+  function getCantiereCounts(cantiere) {
+    const counts = {};
+    cantiere.operai.forEach(op => {
+      if (!counts[op.skillKey]) counts[op.skillKey] = 0;
+      counts[op.skillKey]++;
+    });
+    return counts;
+  }
+
+  // ==================== SALVATAGGIO ====================
+  function salvaSuStorage() {
+    const dati = { SKILLS, pool, cantieri, nextId };
+    localStorage.setItem('cantieriData', JSON.stringify(dati));
+    document.getElementById('saveStatus').innerHTML = '💾 Salvato ' + new Date().toLocaleTimeString();
+  }
+
+  function caricaDaStorage() {
+    const saved = localStorage.getItem('cantieriData');
+    if (saved) {
+      try {
+        const dati = JSON.parse(saved);
+        SKILLS = dati.SKILLS;
+        pool = dati.pool;
+        cantieri = dati.cantieri;
+        nextId = dati.nextId || 3;
+        document.getElementById('saveStatus').innerHTML = '✅ Caricato ' + new Date().toLocaleTimeString();
+      } catch (e) {}
+    }
+  }
+
+  // ==================== FUNZIONI UI ====================
+  window.eliminaCategoria = function(skillKey) {
+    const skill = SKILLS.find(s => s.key === skillKey);
+    if (!skill) return;
+    
+    const operaiNeiCantieri = cantieri.reduce((acc, c) => 
+      acc + c.operai.filter(op => op.skillKey === skillKey).length, 0);
+    
+    if (operaiNeiCantieri > 0 && !confirm(`Ci sono ${operaiNeiCantieri} ${skill.nome} nei cantieri. Eliminando la categoria verranno rimossi anche loro. Continuare?`)) {
+      return;
+    }
+    
+    pool = pool.filter(op => op.skillKey !== skillKey);
+    cantieri.forEach(c => { c.operai = c.operai.filter(op => op.skillKey !== skillKey); });
+    SKILLS = SKILLS.filter(s => s.key !== skillKey);
+    
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  window.aggiungiNuovoTipo = function() {
+    const nomeInput = document.getElementById('nuovoTipoNome');
+    const nome = nomeInput.value.trim();
+    if (!nome) { alert('Inserisci un nome'); return; }
+    
+    const key = nome.toLowerCase().replace(/[^a-z]/g, '');
+    if (SKILLS.some(s => s.key === key)) { alert('Esiste già'); return; }
+    
+    const colore = `hsl(${Math.random() * 360}, 80%, 60%)`;
+    SKILLS.push({ key, nome, colore, totale: 5 });
+    
+    for (let i = 0; i < 5; i++) {
+      pool.push({ id: `pool-${key}-${i}`, skillKey: key, skillNome: nome, colore });
+    }
+    
+    nomeInput.value = '';
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  window.aumentaOperai = function(skillKey) {
+    const skill = SKILLS.find(s => s.key === skillKey);
+    if (!skill) return;
+    skill.totale++;
+    const newIndex = pool.length;
+    pool.push({ id: `pool-${skillKey}-${newIndex}`, skillKey: skill.key, skillNome: skill.nome, colore: skill.colore });
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  window.diminuisciOperai = function(skillKey) {
+    const index = pool.findIndex(op => op.skillKey === skillKey);
+    if (index === -1) return;
+    pool.splice(index, 1);
+    SKILLS.find(s => s.key === skillKey).totale--;
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  function renderPoolTypes() {
+    const container = document.getElementById('poolTypes');
+    const counts = getPoolCounts();
+    
+    let html = '';
+    SKILLS.forEach(skill => {
+      const count = counts[skill.key] || 0;
+      html += `
+        <div class="pool-type" 
+             draggable="${count > 0}" 
+             data-skill="${skill.key}" 
+             data-count="${count}"
+             ondragstart="handlePoolTypeDragStart(event)"
+             ondragend="handleDragEnd(event)"
+             style="${count === 0 ? 'opacity: 0.5;' : ''}">
+          <span class="pool-type-color" style="background: ${skill.colore};"></span>
+          <span class="pool-type-name">${skill.nome}</span>
+          <span class="pool-type-count">${count}</span>
+          <div class="pool-type-controls">
+            <button class="pool-type-btn minus" onclick="event.stopPropagation(); diminuisciOperai('${skill.key}')">−</button>
+            <button class="pool-type-btn plus" onclick="event.stopPropagation(); aumentaOperai('${skill.key}')">+</button>
+            <button class="pool-type-btn delete" onclick="event.stopPropagation(); eliminaCategoria('${skill.key}')">🗑️</button>
+          </div>
+          <span class="pool-type-drag">trascina</span>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  function renderCantieri() {
+    const container = document.getElementById('cantieriContainer');
+    container.innerHTML = '';
+
+    cantieri.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'cantiere-card';
+      card.dataset.id = c.id;
+      card.setAttribute('ondragover', 'handleDragOver(event)');
+      card.setAttribute('ondrop', 'dropOnCantiere(event, ' + c.id + ')');
+
+      const header = document.createElement('div');
+      header.className = 'cantiere-header';
+      header.innerHTML = `
+        <input type="text" class="cantiere-nome-input" value="${c.nome}" data-id="${c.id}" data-field="nome" onchange="salvaModifiche(${c.id})">
+        <input type="text" class="cantiere-localita-input" value="${c.localita}" data-id="${c.id}" data-field="localita" onchange="salvaModifiche(${c.id})">
+      `;
+
+      const counts = getCantiereCounts(c);
+      const iconeContainer = document.createElement('div');
+      iconeContainer.className = 'cantieri-operai';
+
+      if (c.operai.length === 0) {
+        iconeContainer.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:0.5rem;">Nessun operaio</div>';
+      } else {
+        Object.keys(counts).forEach(skillKey => {
+          const skill = SKILLS.find(s => s.key === skillKey);
+          if (!skill) return;
+          const count = counts[skillKey];
+          
+          const icona = document.createElement('div');
+          icona.className = 'tipo-icona';
+          icona.setAttribute('draggable', count > 0 ? 'true' : 'false');
+          icona.setAttribute('data-skill', skillKey);
+          icona.setAttribute('data-cantiere', c.id);
+          icona.setAttribute('data-count', count);
+          icona.setAttribute('data-provenienza', 'cantiere-tipo');
+          
+          icona.addEventListener('dragstart', handleCantiereTipoDragStart);
+          icona.addEventListener('dragend', handleDragEnd);
+          
+          icona.innerHTML = `
+            <span class="tipo-colore" style="background: ${skill.colore};"></span>
+            <span class="tipo-nome">${skill.nome}</span>
+            <span class="tipo-numero">${count}</span>
+          `;
+          iconeContainer.appendChild(icona);
+        });
+      }
+
+      card.appendChild(header);
+      card.appendChild(iconeContainer);
+      container.appendChild(card);
+    });
+
+    renderPoolTypes();
+    aggiornaStats();
+  }
+
+  // ==================== DRAG & DROP ====================
+  window.handlePoolTypeDragStart = function(e) {
+    const typeElement = e.currentTarget;
+    const skill = typeElement.dataset.skill;
+    const count = parseInt(typeElement.dataset.count);
+    if (count === 0) { e.preventDefault(); return; }
+    typeElement.classList.add('dragging');
+    draggedData = { skill, provenienza: 'pool-type' };
+    e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  function handleCantiereTipoDragStart(e) {
+    const icona = e.currentTarget;
+    const skill = icona.dataset.skill;
+    const cantiereId = parseInt(icona.dataset.cantiere);
+    const count = parseInt(icona.dataset.count);
+    if (count === 0) { e.preventDefault(); return; }
+    icona.classList.add('dragging');
+    draggedData = { skill, cantiereId, provenienza: 'cantiere-tipo' };
+    e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  window.handleDragEnd = function(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.cantiere-card, .pool-container').forEach(el => el.classList.remove('drag-over'));
+    draggedData = null;
+  };
+
+  window.handleDragOver = function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  window.dropOnCantiere = function(e, cantiereId) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    const rawData = e.dataTransfer.getData('text/plain');
+    if (!rawData) return;
+    const data = JSON.parse(rawData);
+    if (!data) return;
+
+    const destinazione = cantieri.find(c => c.id === cantiereId);
+    if (!destinazione) return;
+
+    if (data.provenienza === 'pool-type') {
+      const skill = data.skill;
+      const index = pool.findIndex(op => op.skillKey === skill);
+      if (index !== -1) {
+        const operaio = pool[index];
+        pool.splice(index, 1);
+        destinazione.operai.push(operaio);
+      }
+    } else if (data.provenienza === 'cantiere-tipo') {
+      const origineId = data.cantiereId;
+      if (origineId === cantiereId) return;
+      
+      const origine = cantieri.find(c => c.id === origineId);
+      if (!origine) return;
+      
+      const skill = data.skill;
+      const index = origine.operai.findIndex(op => op.skillKey === skill);
+      if (index !== -1) {
+        const operaio = origine.operai[index];
+        origine.operai.splice(index, 1);
+        destinazione.operai.push(operaio);
+      }
+    }
+
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  window.dropOnPool = function(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    const rawData = e.dataTransfer.getData('text/plain');
+    if (!rawData) return;
+    const data = JSON.parse(rawData);
+    if (!data) return;
+
+    if (data.provenienza === 'cantiere-tipo') {
+      const origineId = data.cantiereId;
+      const origine = cantieri.find(c => c.id === origineId);
+      if (!origine) return;
+      
+      const skill = data.skill;
+      const index = origine.operai.findIndex(op => op.skillKey === skill);
+      if (index !== -1) {
+        const operaio = origine.operai[index];
+        origine.operai.splice(index, 1);
+        pool.push(operaio);
+      }
+    }
+
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  // ==================== MODIFICHE CANTIERE ====================
+  window.salvaModifiche = function(id) {
+    const nomeInput = document.querySelector(`.cantiere-nome-input[data-id="${id}"]`);
+    const locInput = document.querySelector(`.cantiere-localita-input[data-id="${id}"]`);
+    const cantiere = cantieri.find(c => c.id === id);
+    if (cantiere) {
+      cantiere.nome = nomeInput.value;
+      cantiere.localita = locInput.value;
+    }
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  window.aggiungiCantiere = function() {
+    const nuovo = {
+      id: nextId++,
+      nome: 'Nuovo cantiere',
+      localita: 'Località',
+      operai: []
+    };
+    cantieri.push(nuovo);
+    renderCantieri();
+    salvaSuStorage();
+  };
+
+  function aggiornaStats() {
+    const totAss = totaleAssegnati();
+    const totSkill = SKILLS.reduce((acc, s) => acc + s.totale, 0);
+    document.getElementById('totale-organico').innerText = totSkill;
+    document.getElementById('totale-assegnati').innerText = totAss;
+    
+    const counts = getPoolCounts();
+    const totLiberi = Object.values(counts).reduce((a,b) => a + b, 0);
+    document.getElementById('libertotale').innerHTML = `👥 ${totLiberi} operai disponibili nel pool`;
+  }
+
+  // ==================== CHAT AI ====================
+  const GROQ_API_KEY = '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';
+  let chatMinimized = false;
+
+  window.toggleChat = function() {
+    const chat = document.getElementById('aiChat');
+    const toggle = document.getElementById('aiToggle');
+    chatMinimized = !chatMinimized;
+    if (chatMinimized) {
+      chat.classList.add('ai-minimized');
+      toggle.innerText = '▲';
+    } else {
+      chat.classList.remove('ai-minimized');
+      toggle.innerText = '▼';
+    }
+  };
+
+  function addAIMessage(text, role) {
+    const container = document.getElementById('aiMessages');
+    const msg = document.createElement('div');
+    msg.className = `ai-message ${role}`;
+    msg.innerText = role === 'user' ? `🧑 ${text}` : `🤖 ${text}`;
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function trovaSkillDaTesto(parola) {
+    const lower = parola.toLowerCase();
+    for (let [syn, key] of Object.entries(SKILL_SYNONYMS)) {
+      if (lower.includes(syn)) return key;
+    }
+    const skill = SKILLS.find(s => s.nome.toLowerCase().includes(lower));
+    return skill ? skill.key : null;
+  }
+
+  function eseguiComandoAI(testo) {
+    const t = testo.toLowerCase();
+    
+    // Aggiungi operai
+    const matchAdd = t.match(/(?:aggiungi|crea|metti)\s+(\d+)\s+([a-z]+)/i);
+    if (matchAdd) {
+      const q = parseInt(matchAdd[1]);
+      const skillParola = matchAdd[2];
+      const skillKey = trovaSkillDaTesto(skillParola);
+      if (!skillKey) return false;
+      
+      const skill = SKILLS.find(s => s.key === skillKey);
+      for (let i = 0; i < q; i++) {
+        pool.push({ id: `pool-${skillKey}-${Date.now()+i}`, skillKey, skillNome: skill.nome, colore: skill.colore });
+      }
+      renderCantieri();
+      salvaSuStorage();
+      addAIMessage(`✅ Aggiunti ${q} ${skill.nome} al pool`, 'assistant');
+      return true;
+    }
+    
+    // Sposta a cantiere
+    const matchMoveTo = t.match(/(?:sposta|metti)\s+(\d+)\s+([a-z]+)\s+(?:a|in|su)\s+([a-z]+)/i);
+    if (matchMoveTo) {
+      const q = parseInt(matchMoveTo[1]);
+      const skillParola = matchMoveTo[2];
+      const cantiereParola = matchMoveTo[3];
+      
+      const skillKey = trovaSkillDaTesto(skillParola);
+      const cantiere = cantieri.find(c => c.nome.toLowerCase().includes(cantiereParola) || c.localita.toLowerCase().includes(cantiereParola));
+      
+      if (!skillKey || !cantiere) return false;
+      
+      const skill = SKILLS.find(s => s.key === skillKey);
+      let spostati = 0;
+      for (let i = 0; i < q; i++) {
+        const idx = pool.findIndex(op => op.skillKey === skillKey);
+        if (idx === -1) break;
+        cantiere.operai.push(pool[idx]);
+        pool.splice(idx, 1);
+        spostati++;
+      }
+      
+      renderCantieri();
+      salvaSuStorage();
+      addAIMessage(`✅ Spostati ${spostati} ${skill.nome} a ${cantiere.nome}`, 'assistant');
+      return true;
+    }
+    
+    // Riepilogo
+    if (t.includes('riepilogo') || t.includes('situazione')) {
+      let msg = '📊 RIEPILOGO\n\n';
+      msg += `Pool: ${pool.length} operai\n`;
+      cantieri.forEach(c => {
+        msg += `\n${c.nome}: ${c.operai.length} operai\n`;
+        const cnt = {};
+        c.operai.forEach(op => cnt[op.skillNome] = (cnt[op.skillNome]||0)+1);
+        Object.entries(cnt).forEach(([s,n]) => msg += `  • ${s}: ${n}\n`);
+      });
+      addAIMessage(msg, 'assistant');
+      return true;
+    }
+    
+    return false;
+  }
+
+  window.sendAIMessage = async function() {
+    const input = document.getElementById('aiInput');
+    const testo = input.value.trim();
+    if (!testo) return;
+    
+    addAIMessage(testo, 'user');
+    input.value = '';
+    
+    // Prova come comando
+    if (eseguiComandoAI(testo)) return;
+    
+    // Altrimenti chiama Groq
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: 'Sei un assistente amichevole. Rispondi in italiano.' },
+            { role: 'user', content: testo }
+          ]
+        })
+      });
+      
+      const data = await response.json();
+      addAIMessage(data.choices[0].message.content, 'assistant');
+    } catch (error) {
+      addAIMessage('Errore di connessione a Groq', 'assistant');
+    }
+  };
+
+  // ==================== INIT ====================
+ // ==================== AGENTE AUTOMATICO ====================
+let agenteAttivo = false;
+
+// Attiva/disattiva agente
+function toggleAgente() {
+  agenteAttivo = !agenteAttivo;
+  const status = agenteAttivo ? '✅ Agente attivo' : '⛔ Agente fermo';
+  document.getElementById('saveStatus').innerText = status;
 }
 
+// Funzione che analizza lo stato e decide azioni
+function agenteAnalizza() {
+  if (!agenteAttivo) return;
 
-function caricaStorage(){
+  // Copia dello stato corrente
+  const stato = {
+    cantieri: JSON.parse(JSON.stringify(cantieri)),
+    pool: JSON.parse(JSON.stringify(pool)),
+    skills: SKILLS.map(s => ({ key: s.key, nome: s.nome, colore: s.colore }))
+  };
 
-let p=localStorage.getItem("pool")
-let c=localStorage.getItem("cantieri")
+  // Esempio di strategia banale:
+  // sposta operai liberi nei cantieri con meno persone
+  for (let skill of stato.skills) {
+    const disponibili = pool.filter(op => op.skillKey === skill.key);
+    if (disponibili.length === 0) continue;
 
-if(p) pool=JSON.parse(p)
-if(c) cantieri=JSON.parse(c)
+    // Trova cantiere con meno operai totali
+    const cantiereVuoto = stato.cantieri.reduce((minC, c) => {
+      return c.operai.length < minC.operai.length ? c : minC;
+    }, stato.cantieri[0]);
 
+    if (!cantiereVuoto) continue;
+
+    // Numero di operai da spostare (1 alla volta)
+    const operaio = pool.find(op => op.skillKey === skill.key);
+    if (!operaio) continue;
+
+    // Esegui lo spostamento reale sui dati globali
+    const poolIdx = pool.findIndex(op => op.id === operaio.id);
+    if (poolIdx !== -1) {
+      pool.splice(poolIdx, 1);
+      cantiereVuoto.operai.push(operaio);
+      addAIMessage(`🤖 Agente ha spostato 1 ${skill.nome} a ${cantiereVuoto.nome}`, 'assistant');
+    }
+  }
+
+  // Aggiorna UI e salva
+  renderCantieri();
+  salvaSuStorage();
 }
 
-
-function render(){
-
-const poolDiv=document.getElementById("pool")
-poolDiv.innerHTML=""
-
-pool.forEach((o,i)=>{
-
-let div=document.createElement("div")
-
-div.className="operaio"
-div.innerText=o.skill
-div.draggable=true
-
-div.ondragstart=e=>{
-
-e.dataTransfer.setData("operaio",i)
-
-}
-
-poolDiv.appendChild(div)
-
-})
-
-
-const cantieriDiv=document.getElementById("cantieri")
-cantieriDiv.innerHTML=""
-
-cantieri.forEach((c,index)=>{
-
-let div=document.createElement("div")
-
-div.className="cantiere"
-
-div.innerHTML="<b>"+c.nome+"</b><br>"
-
-div.ondragover=e=>e.preventDefault()
-
-div.ondrop=e=>{
-
-const id=e.dataTransfer.getData("operaio")
-
-const op=pool.splice(id,1)[0]
-
-c.operai.push(op)
-
-render()
-
-salvaStorage()
-
-}
-
-c.operai.forEach(o=>{
-
-let op=document.createElement("div")
-
-op.className="operaio"
-
-op.innerText=o.skill
-
-div.appendChild(op)
-
-})
-
-cantieriDiv.appendChild(div)
-
-})
-
-}
-
-
-
-function generaOperai(){
-
-for(let i=0;i<6;i++){
-
-let tipo=tipiOperai[Math.floor(Math.random()*tipiOperai.length)]
-
-pool.push({skill:tipo})
-
-}
-
-render()
-
-salvaStorage()
-
-}
-
-
-
-function aggiungiCantiere(){
-
-let nome=document.getElementById("nomeCantiere").value
-
-cantieri.push({
-nome:nome,
-operai:[]
-})
-
-render()
-
-salvaStorage()
-
-}
-
-
-
-function addAIMessage(text,autorizza=false){
-
-const chat=document.getElementById("chat")
-
-let div=document.createElement("div")
-
-div.className="msg ai"
-
-div.innerHTML=text
-
-if(autorizza){
-
-let btn=document.createElement("button")
-
-btn.innerText="AUTORIZZA"
-
-btn.className="autorizza"
-
-btn.onclick=eseguiAzioneAgente
-
-div.appendChild(document.createElement("br"))
-
-div.appendChild(btn)
-
-}
-
-chat.appendChild(div)
-
-chat.scrollTop=chat.scrollHeight
-
-}
-
-
-
-function agenteAnalizza(){
-
-if(azioneProposta) return
-
-for(let c of cantieri){
-
-if(c.operai.length===0 && pool.length>0){
-
-azioneProposta={
-
-tipo:"assegna",
-cantiere:c
-
-}
-
-addAIMessage(
-
-"⚠️ "+c.nome+" è senza operai.<br>Propongo di mandarne uno.",
-
-true
-
-)
-
-return
-
-}
-
-}
-
-}
-
-
-
-function eseguiAzioneAgente(){
-
-if(!azioneProposta) return
-
-let c=azioneProposta.cantiere
-
-let op=pool.shift()
-
-c.operai.push(op)
-
-render()
-
-salvaStorage()
-
-addAIMessage("✅ Operaio mandato a "+c.nome)
-
-azioneProposta=null
-
-}
-
-
-
-setInterval(()=>{
-
-if(Math.random()<0.7){
-
-agenteAnalizza()
-
-}
-
-},20000)
-
-
-
-async function mandaMessaggio(){
-
-let msg=document.getElementById("msgInput").value
-
-addAIMessage("Tu: "+msg)
-
-if(!GROQ_KEY) return
-
-let res=await fetch(
-
-"https://api.groq.com/openai/v1/chat/completions",
-
-{
-
-method:"POST",
-
-headers:{
-
-"Authorization":"Bearer "+GROQ_KEY,
-
-"Content-Type":"application/json"
-
-},
-
-body:JSON.stringify({
-
-model:"llama-3.3-70b-versatile",
-
-messages:[
-
-{role:"system",content:"Assistente gestione cantieri"},
-
-{role:"user",content:msg}
-
-]
-
-})
-
-}
-
-)
-
-let data=await res.json()
-
-addAIMessage(data.choices[0].message.content)
-
-}
-
-
-
-function salvaKey(){
-
-GROQ_KEY=document.getElementById("groqKey").value
-
-localStorage.setItem("groqKey",GROQ_KEY)
-
-addAIMessage("🔑 Key salvata")
-
-}
-
-
-
-caricaStorage()
-
-render()
-
+// Esecuzione ciclica agente (es. ogni 10 secondi)
+setInterval(() => {
+  agenteAnalizza();
+}, 10000);
+
+// Bottone per attivare agente manualmente
+const agenteBtn = document.createElement('button');
+agenteBtn.innerText = 'Autorizza agente';
+agenteBtn.style.marginLeft = '0.5rem';
+agenteBtn.style.padding = '0.3rem 0.6rem';
+agenteBtn.style.borderRadius = '20px';
+agenteBtn.style.border = 'none';
+agenteBtn.style.background = '#2563eb';
+agenteBtn.style.color = 'white';
+agenteBtn.style.cursor = 'pointer';
+agenteBtn.onclick = toggleAgente;
+
+// Aggiungilo all'header
+document.querySelector('.app-header').appendChild(agenteBtn);
+  window.addEventListener('load', () => {
+    caricaDaStorage();
+    renderCantieri();
+    
+    document.getElementById('aiInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendAIMessage();
+    });
+  });
 </script>
-
 </body>
-
 </html>
