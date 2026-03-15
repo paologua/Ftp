@@ -1,5 +1,390 @@
 <!DOCTYPE html>
+<html lang="it"><!DOCTYPE html>
 <html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cantieri · Con AI</title>
+<style>
+/* ==================== RESET & GLOBAL ==================== */
+* { margin:0; padding:0; box-sizing:border-box; font-family: 'Inter', sans-serif; }
+body { background:#f1f5f9; color:#0f172a; padding:1.5rem; display:flex; flex-direction:column; height:100vh; }
+
+/* ==================== DASHBOARD ==================== */
+.dashboard { flex:1; display:grid; grid-template-columns:1.5fr 1fr; gap:1.5rem; overflow:hidden; }
+
+/* HEADER */
+.app-header { grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; background:white; border-radius:24px; padding:1rem 1.5rem; box-shadow:0 4px 6px -2px rgba(0,0,0,0.05); margin-bottom:0.5rem; }
+.app-title { font-weight:700; font-size:1.2rem; }
+.save-status { font-size:0.7rem; color:#059669; background:#e0f2fe; padding:0.3rem 1rem; border-radius:30px; }
+.btn-icon { border:none; background:#2563eb; color:white; border-radius:20px; padding:0.3rem 0.8rem; cursor:pointer; font-weight:600; }
+.btn-icon:hover { background:#1d4ed8; }
+
+/* ==================== CANTIERI ==================== */
+.cantieri-section { background:white; border-radius:24px; padding:1.5rem; box-shadow:0 4px 6px -2px rgba(0,0,0,0.05); overflow-y:auto; height:100%; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem; }
+.section-title { font-weight:700; font-size:1.2rem; }
+.cantiere-card { border:1px solid #e2e8f0; border-radius:20px; padding:1.2rem; margin-bottom:1.2rem; background:#f8fafc; transition:background-color 0.1s; }
+.cantiere-card.drag-over { background:#e0f2fe; border:2px dashed #2563eb; }
+.cantiere-header { display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; margin-bottom:1rem; }
+.cantiere-nome-input, .cantiere-localita-input { padding:0.3rem 0.8rem; border-radius:30px; border:1px solid #cbd5e1; font-size:0.8rem; background:white; }
+.cantiere-nome-input { font-weight:700; min-width:140px; }
+.cantiere-localita-input { min-width:120px; font-size:0.8rem; }
+
+/* Operai nei cantieri */
+.cantieri-operai { display:flex; flex-wrap:wrap; gap:0.8rem; margin-top:0.8rem; padding:0.5rem 0; min-height:50px; }
+.tipo-icona { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem 0.5rem 0.8rem; background:white; border:2px solid #e2e8f0; border-radius:40px; box-shadow:0 2px 4px rgba(0,0,0,0.05); cursor:grab; user-select:none; transition:all 0.1s; }
+.tipo-icona:active { cursor:grabbing; opacity:0.8; }
+.tipo-icona.dragging { opacity:0.3; }
+.tipo-colore { width:16px; height:16px; border-radius:4px; }
+.tipo-nome { font-weight:500; font-size:0.8rem; }
+.tipo-numero { font-weight:700; font-size:1rem; min-width:24px; text-align:center; background:#f1f5f9; padding:0.2rem 0.4rem; border-radius:20px; }
+
+/* ==================== POOL OPERAI ==================== */
+.personale-section { background:white; border-radius:24px; padding:1.5rem; box-shadow:0 4px 6px -2px rgba(0,0,0,0.05); height:100%; overflow-y:auto; display:flex; flex-direction:column; }
+.stats-totali { background:#f1f5f9; border-radius:18px; padding:1rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; font-weight:600; }
+.pool-container { background:#f8fafc; border-radius:20px; padding:1rem; min-height:200px; border:2px dashed #2563eb; margin-bottom:1rem; flex-shrink:0; }
+.pool-container.drag-over { background:#e0f2fe; border-color:#059669; }
+.pool-title { font-weight:600; font-size:0.8rem; margin-bottom:1rem; color:#475569; }
+.pool-types { display:flex; flex-direction:column; gap:0.8rem; }
+.pool-type { display:flex; align-items:center; gap:0.5rem; padding:0.8rem; background:white; border:2px solid #e2e8f0; border-radius:50px; cursor:grab; user-select:none; transition:all 0.1s; box-shadow:0 2px 4px rgba(0,0,0,0.05); }
+.pool-type:active { cursor:grabbing; opacity:0.8; }
+.pool-type.dragging { opacity:0.3; }
+.pool-type-color { width:20px; height:20px; border-radius:6px; }
+.pool-type-name { font-weight:600; font-size:1rem; min-width:100px; }
+.pool-type-count { font-weight:700; font-size:1.2rem; min-width:40px; text-align:center; color:#0f172a; }
+.pool-type-controls { display:flex; gap:0.3rem; margin-left:auto; }
+.pool-type-btn { width:32px; height:32px; border-radius:30px; border:1px solid #cbd5e1; background:white; font-weight:700; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.pool-type-btn:hover { background:#e0f2fe; border-color:#2563eb; }
+.pool-type-btn.minus { color:#dc2626; }
+.pool-type-btn.plus { color:#059669; }
+.pool-type-btn.delete { color:#dc2626; background:#fee2e2; border-color:#dc2626; width:auto; padding:0 0.8rem; font-size:0.7rem; }
+.pool-type-btn.delete:hover { background:#fecaca; }
+.pool-type-drag { font-size:0.65rem; color:#2563eb; background:#e0f2fe; padding:0.2rem 0.8rem; border-radius:30px; }
+
+/* Aggiunta nuovi tipi */
+.add-tipo { margin-top:1rem; padding:1rem; background:#f1f5f9; border-radius:20px; flex-shrink:0; }
+.add-tipo-form { display:flex; flex-direction:column; gap:0.8rem; }
+.add-tipo-inputs { display:flex; gap:0.5rem; flex-wrap:wrap; }
+.add-tipo-input { flex:1; padding:0.5rem 0.8rem; border:1px solid #cbd5e1; border-radius:30px; font-size:0.8rem; }
+.add-tipo-btn { background:#2563eb; color:white; border:none; border-radius:30px; padding:0.5rem 1rem; font-weight:600; cursor:pointer; }
+.add-tipo-btn:hover { background:#1d4ed8; }
+
+/* CHAT AI */
+.ai-chat { position:fixed; bottom:20px; right:20px; width:320px; background:white; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); border:1px solid #e2e8f0; z-index:1000; overflow:hidden; }
+.ai-header { background:#0f172a; color:white; padding:12px; font-weight:600; font-size:0.9rem; cursor:pointer; display:flex; justify-content:space-between; }
+.ai-messages { height:200px; overflow-y:auto; padding:12px; background:#f8fafc; font-size:0.8rem; }
+.ai-message { margin-bottom:8px; padding:6px 10px; border-radius:12px; max-width:85%; word-wrap:break-word; }
+.ai-message.user { background:#2563eb; color:white; margin-left:auto; }
+.ai-message.assistant { background:#e2e8f0; color:#0f172a; }
+.ai-input-area { display:flex; padding:10px; background:white; border-top:1px solid #e2e8f0; }
+.ai-input { flex:1; padding:8px 12px; border:1px solid #cbd5e1; border-radius:30px; font-size:0.8rem; }
+.ai-input:focus { outline:none; border-color:#2563eb; }
+.ai-send { background:#2563eb; color:white; border:none; border-radius:30px; padding:8px 12px; margin-left:8px; cursor:pointer; font-size:0.7rem; }
+.ai-send:hover { background:#1d4ed8; }
+.ai-minimized .ai-messages, .ai-minimized .ai-input-area { display:none; }
+
+/* LIBERTA */
+.libertotale { margin-top:1rem; background:#e0f2fe; padding:0.8rem 1rem; border-radius:30px; font-size:0.8rem; font-weight:500; flex-shrink:0; }
+.drag-note { font-size:0.7rem; color:#64748b; margin-bottom:0.8rem; background:#f1f5f9; padding:0.5rem 1rem; border-radius:30px; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<div class="dashboard">
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="app-title">🏗️ CANTIERI · GESTIONE OPERAI</div>
+    <span class="save-status" id="saveStatus">💾 Salvato</span>
+    <button class="btn-icon" id="autorizzaAgente">🤖 Autorizza agente</button>
+  </div>
+
+  <!-- CANTIERI -->
+  <div class="cantieri-section">
+    <div class="section-header">
+      <span class="section-title">🏗️ CANTIERI</span>
+      <button class="btn-icon" onclick="aggiungiCantiere()">+ NUOVO CANTIERE</button>
+    </div>
+    <div id="cantieriContainer"></div>
+  </div>
+
+  <!-- POOL -->
+  <div class="personale-section">
+    <div class="section-title">👥 POOL OPERAI</div>
+    <div class="stats-totali">
+      <span>Organico: <span id="totale-organico">0</span></span>
+      <span>Assegnati: <span id="totale-assegnati">0</span></span>
+    </div>
+    <div class="drag-note">🖱️ Trascina le icone · +/- per quantità · 🗑️ elimina categoria</div>
+    <div class="pool-container" id="poolContainer" ondragover="handleDragOver(event)" ondrop="dropOnPool(event)">
+      <div class="pool-title">📊 TIPI OPERAI (DRAGGABILI)</div>
+      <div class="pool-types" id="poolTypes"></div>
+      <div class="add-tipo">
+        <div class="add-title">➕ AGGIUNGI NUOVO TIPO OPERAIO</div>
+        <div class="add-tipo-form">
+          <div class="add-tipo-inputs">
+            <input type="text" class="add-tipo-input" id="nuovoTipoNome" placeholder="es. Carpentieri">
+          </div>
+          <button class="add-tipo-btn" onclick="aggiungiNuovoTipo()">CREA NUOVO TIPO</button>
+        </div>
+      </div>
+    </div>
+    <div class="libertotale" id="libertotale">👥 Calcolo...</div>
+  </div>
+</div>
+
+<!-- CHAT AI -->
+<div class="ai-chat" id="aiChat">
+  <div class="ai-header" onclick="toggleChat()">
+    <span>🤖 Assistente AI</span>
+    <span id="aiToggle">▼</span>
+  </div>
+  <div class="ai-messages" id="aiMessages">
+    <div class="ai-message assistant">Ciao! Puoi gestire cantieri e operai direttamente da qui.</div>
+  </div>
+  <div class="ai-input-area">
+    <input type="text" class="ai-input" id="aiInput" placeholder="Scrivi un messaggio...">
+    <button class="ai-send" onclick="sendAIMessage()">Invia</button>
+  </div>
+</div>
+
+<script>
+// ==================== STATO ====================
+let SKILLS = [
+  { key:'mont', nome:'Montatori', colore:'#3b82f6', totale:5 },
+  { key:'sald', nome:'Saldatori', colore:'#ef4444', totale:5 },
+  { key:'elett', nome:'Elettricisti', colore:'#f97316', totale:5 }
+];
+
+let SKILL_SYNONYMS = {
+  'montatore':'mont','montatori':'mont','muratore':'mont','muratori':'mont',
+  'saldatore':'sald','saldatori':'sald',
+  'elettricista':'elett','elettricisti':'elett'
+};
+
+let pool = [];
+let cantieri = [];
+let nextCantiereId = 0;
+let draggedData = null;
+let agenteAutorizzato = false;
+
+// ==================== INIZIALIZZAZIONE ====================
+function init() {
+  // esempio iniziale
+  aggiungiCantiere('Stazione MM','Milano');
+  aggiungiCantiere('Deposito AT','Torino');
+  aggiungiCantiere('Linea Alta Tensione','Genova');
+  SKILLS.forEach(s=>{
+    for(let i=0;i<s.totale;i++){
+      pool.push({id:`pool-${s.key}-${i}`,skillKey:s.key,skillNome:s.nome,colore:s.colore});
+    }
+  });
+  renderCantieri();
+}
+window.addEventListener('load',()=>{
+  init();
+  document.getElementById('aiInput').addEventListener('keypress',e=>{
+    if(e.key==='Enter') sendAIMessage();
+  });
+});
+
+// ==================== FUNZIONI MANUALI ====================
+function aggiungiCantiere(nome='Nuovo cantiere', localita='Località') {
+  cantieri.push({id:nextCantiereId++, nome, localita, operai:[]});
+  renderCantieri();
+  salvaSuStorage();
+}
+function modificaCantiere(id,nome,localita){
+  const c=cantieri.find(c=>c.id===id);
+  if(c){c.nome=nome;c.localita=localita;}
+  renderCantieri();
+  salvaSuStorage();
+}
+function aggiungiNuovoTipo(){
+  const nomeInput=document.getElementById('nuovoTipoNome');
+  const nome=nomeInput.value.trim();
+  if(!nome){alert('Inserisci un nome');return;}
+  const key=nome.toLowerCase().replace(/[^a-z]/g,'');
+  if(SKILLS.some(s=>s.key===key)){alert('Esiste già');return;}
+  const colore=`hsl(${Math.random()*360},80%,60%)`;
+  SKILLS.push({key,nome,colore,totale:5});
+  for(let i=0;i<5;i++){pool.push({id:`pool-${key}-${i}`,skillKey:key,skillNome:nome,colore});}
+  nomeInput.value='';
+  renderCantieri();
+  salvaSuStorage();
+}
+function aggiungiOperaioAlPool(skillKey,quantita){
+  const s=SKILLS.find(s=>s.key===skillKey);
+  if(!s)return;
+  for(let i=0;i<quantita;i++){
+    pool.push({id:`pool-${skillKey}-${Date.now()+i}`,skillKey,skillNome:s.nome,colore:s.colore});
+  }
+  renderCantieri();
+  salvaSuStorage();
+}
+function spostaOperaioAlCantiere(skillKey,cantiereId,quantita){
+  const c=cantieri.find(c=>c.id===cantiereId);
+  if(!c)return;
+  let spostati=0;
+  for(let i=0;i<quantita;i++){
+    const idx=pool.findIndex(op=>op.skillKey===skillKey);
+    if(idx===-1)break;
+    c.operai.push(pool[idx]);
+    pool.splice(idx,1);
+    spostati++;
+  }
+  renderCantieri();
+  salvaSuStorage();
+}
+function rimuoviOperaioDaCantiere(skillKey,cantiereId,quantita){
+  const c=cantieri.find(c=>c.id===cantiereId);
+  if(!c)return;
+  let rimossi=0;
+  for(let i=0;i<quantita;i++){
+    const idx=c.operai.findIndex(op=>op.skillKey===skillKey);
+    if(idx===-1)break;
+    pool.push(c.operai[idx]);
+    c.operai.splice(idx,1);
+    rimossi++;
+  }
+  renderCantieri();
+  salvaSuStorage();
+}
+function eliminaCategoria(skillKey){
+  const s=SKILLS.find(s=>s.key===skillKey);
+  if(!s)return;
+  if(!confirm(`Elimini ${s.nome} dal pool e dai cantieri?`)) return;
+  pool=pool.filter(op=>op.skillKey!==skillKey);
+  cantieri.forEach(c=>{c.operai=c.operai.filter(op=>op.skillKey!==skillKey)});
+  SKILLS=SKILLS.filter(s=>s.key!==skillKey);
+  renderCantieri();
+  salvaSuStorage();
+}
+
+// ==================== DRAG & DROP ====================
+function allowDrop(ev){ ev.preventDefault(); }
+function handleDragStart(ev,data){ draggedData=data; ev.dataTransfer.effectAllowed='move'; }
+function handleDragOver(ev){ ev.preventDefault(); ev.currentTarget.classList.add('drag-over'); }
+function handleDragLeave(ev){ ev.currentTarget.classList.remove('drag-over'); }
+function dropOnCantiere(ev,cantiereId){
+  ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
+  if(!draggedData) return;
+  if(draggedData.tipo==='pool'){ spostaOperaioAlCantiere(draggedData.skillKey,cantiereId,1); }
+  draggedData=null;
+}
+function dropOnPool(ev){
+  ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
+  if(!draggedData) return;
+  if(draggedData.tipo==='cantiere'){ rimuoviOperaioDaCantiere(draggedData.skillKey,draggedData.cantiereId,1); }
+  draggedData=null;
+}
+
+// ==================== RENDER ====================
+function renderCantieri(){
+  const cont=document.getElementById('cantieriContainer'); cont.innerHTML='';
+  cantieri.forEach(c=>{
+    const card=document.createElement('div'); card.className='cantiere-card';
+    card.ondragover=allowDrop;
+    card.ondrop=(e)=>dropOnCantiere(e,c.id);
+
+    const header=document.createElement('div'); header.className='cantiere-header';
+    const nomeInput=document.createElement('input'); nomeInput.className='cantiere-nome-input';
+    nomeInput.value=c.nome; nomeInput.onchange=(e)=>modificaCantiere(c.id,e.target.value,c.localita);
+    const locInput=document.createElement('input'); locInput.className='cantiere-localita-input';
+    locInput.value=c.localita; locInput.onchange=(e)=>modificaCantiere(c.id,c.nome,e.target.value);
+    header.appendChild(nomeInput); header.appendChild(locInput); card.appendChild(header);
+
+    const operaiDiv=document.createElement('div'); operaiDiv.className='cantieri-operai';
+    c.operai.forEach(op=>{
+      const opDiv=document.createElement('div'); opDiv.className='tipo-icona';
+      opDiv.draggable=true; opDiv.ondragstart=(e)=>handleDragStart(e,{tipo:'cantiere',skillKey:op.skillKey,cantiereId:c.id});
+      const col=document.createElement('div'); col.className='tipo-colore'; col.style.background=op.colore;
+      const nome=document.createElement('div'); nome.className='tipo-nome'; nome.textContent=op.skillNome;
+      opDiv.appendChild(col); opDiv.appendChild(nome);
+      operaiDiv.appendChild(opDiv);
+    });
+    card.appendChild(operaiDiv);
+
+    cont.appendChild(card);
+  });
+  renderPool();
+  aggiornaTotali();
+}
+function renderPool(){
+  const cont=document.getElementById('poolTypes'); cont.innerHTML='';
+  SKILLS.forEach(s=>{
+    const tipoDiv=document.createElement('div'); tipoDiv.className='pool-type';
+    tipoDiv.draggable=true; tipoDiv.ondragstart=(e)=>handleDragStart(e,{tipo:'pool',skillKey:s.key});
+    const col=document.createElement('div'); col.className='pool-type-color'; col.style.background=s.colore;
+    const nome=document.createElement('div'); nome.className='pool-type-name'; nome.textContent=s.nome;
+    const cnt=document.createElement('div'); cnt.className='pool-type-count'; cnt.textContent=pool.filter(op=>op.skillKey===s.key).length;
+    const controls=document.createElement('div'); controls.className='pool-type-controls';
+    const minus=document.createElement('button'); minus.className='pool-type-btn minus'; minus.textContent='-'; minus.onclick=()=>aggiungiOperaioAlPool(s.key,-1);
+    const plus=document.createElement('button'); plus.className='pool-type-btn plus'; plus.textContent='+'; plus.onclick=()=>aggiungiOperaioAlPool(s.key,1);
+    const del=document.createElement('button'); del.className='pool-type-btn delete'; del.textContent='Elimina'; del.onclick=()=>eliminaCategoria(s.key);
+    controls.appendChild(minus); controls.appendChild(plus); controls.appendChild(del);
+    tipoDiv.appendChild(col); tipoDiv.appendChild(nome); tipoDiv.appendChild(cnt); tipoDiv.appendChild(controls);
+    cont.appendChild(tipoDiv);
+  });
+}
+
+// ==================== TOTALI ====================
+function aggiornaTotali(){
+  const totaleOrganico=pool.length;
+  const totaleAssegnati=cantieri.reduce((acc,c)=>acc+c.operai.length,0);
+  document.getElementById('totale-organico').textContent=totaleOrganico;
+  document.getElementById('totale-assegnati').textContent=totaleAssegnati;
+  document.getElementById('libertotale').textContent=`👥 Operai liberi: ${totaleOrganico}`;
+}
+
+// ==================== STORAGE ====================
+function salvaSuStorage(){
+  localStorage.setItem('cantieriAppData',JSON.stringify({cantieri,pool,SKILLS}));
+}
+
+// ==================== AI CHAT ====================
+function toggleChat(){
+  document.getElementById('aiChat').classList.toggle('ai-minimized');
+  document.getElementById('aiToggle').textContent=document.getElementById('aiChat').classList.contains('ai-minimized')?'▲':'▼';
+}
+function sendAIMessage(){
+  const input=document.getElementById('aiInput');
+  const testo=input.value.trim();
+  if(!testo) return;
+  appendAIMessage(testo,'user');
+  input.value='';
+  setTimeout(()=>processAI(testo),300);
+}
+function appendAIMessage(msg,who){
+  const cont=document.getElementById('aiMessages');
+  const div=document.createElement('div'); div.className='ai-message '+who; div.textContent=msg;
+  cont.appendChild(div); cont.scrollTop=cont.scrollHeight;
+}
+function processAI(msg){
+  if(!agenteAutorizzato){ appendAIMessage('⚠️ Agente non autorizzato a operare.'); return; }
+  // Parsing semplice
+  msg=msg.toLowerCase();
+  let eseguito=false;
+  SKILLS.forEach(s=>{
+    if(msg.includes(s.nome.toLowerCase()) || Object.keys(SKILL_SYNONYMS).some(k=>msg.includes(k))){
+      if(msg.includes('aggiungi') || msg.includes('metti')){
+        spostaOperaioAlCantiere(s.key,0,1); eseguito=true;
+      }
+    }
+  });
+  if(!eseguito) appendAIMessage('🟡 Non ho capito, scrivi in termini chiari.');
+}
+
+// ==================== AUTORIZZAZIONE ====================
+document.getElementById('autorizzaAgente').addEventListener('click',()=>{
+  agenteAutorizzato=!agenteAutorizzato;
+  document.getElementById('autorizzaAgente').textContent=agenteAutorizzato?'🤖 Agente ATTIVO':'🤖 Autorizza agente';
+  appendAIMessage(agenteAutorizzato?'✅ Agente pronto a operare':'⚠️ Agente disattivato');
+});
+
+</script>
+</body>
+</html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
