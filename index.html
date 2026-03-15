@@ -942,222 +942,265 @@
     document.getElementById('libertotale').innerHTML = `👥 ${totLiberi} operai disponibili nel pool`;
   }
 
-  // ==================== CHAT AI ====================
-  const GROQ_API_KEY = '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';
-  let chatMinimized = false;
+<!-- SOSTITUISCI DA QUI (tutta la sezione CHAT AI) -->
 
-  window.toggleChat = function() {
-    const chat = document.getElementById('aiChat');
-    const toggle = document.getElementById('aiToggle');
-    chatMinimized = !chatMinimized;
-    if (chatMinimized) {
-      chat.classList.add('ai-minimized');
-      toggle.innerText = '▲';
-    } else {
-      chat.classList.remove('ai-minimized');
-      toggle.innerText = '▼';
-    }
-  };
+<script>
+// ==================== CHAT AI (VERSIONE POTENZIATA 2026) ====================
+const GROQ_API_KEY = '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';
+let chatMinimized = false;
 
-  function addAIMessage(text, role) {
-    const container = document.getElementById('aiMessages');
-    const msg = document.createElement('div');
-    msg.className = `ai-message ${role}`;
-    msg.innerText = role === 'user' ? `🧑 ${text}` : `🤖 ${text}`;
-    container.appendChild(msg);
-    container.scrollTop = container.scrollHeight;
+window.toggleChat = function() {
+  const chat = document.getElementById('aiChat');
+  const toggle = document.getElementById('aiToggle');
+  chatMinimized = !chatMinimized;
+  if (chatMinimized) {
+    chat.classList.add('ai-minimized');
+    toggle.innerText = '▲';
+  } else {
+    chat.classList.remove('ai-minimized');
+    toggle.innerText = '▼';
   }
+};
 
-  function trovaSkillDaTesto(parola) {
-    const lower = parola.toLowerCase();
-    for (let [syn, key] of Object.entries(SKILL_SYNONYMS)) {
-      if (lower.includes(syn)) return key;
-    }
-    const skill = SKILLS.find(s => s.nome.toLowerCase().includes(lower));
-    return skill ? skill.key : null;
-  }
-
-  function eseguiComandoAI(testo) {
-    const t = testo.toLowerCase();
-    
-    // Aggiungi operai
-    const matchAdd = t.match(/(?:aggiungi|crea|metti)\s+(\d+)\s+([a-z]+)/i);
-    if (matchAdd) {
-      const q = parseInt(matchAdd[1]);
-      const skillParola = matchAdd[2];
-      const skillKey = trovaSkillDaTesto(skillParola);
-      if (!skillKey) return false;
-      
-      const skill = SKILLS.find(s => s.key === skillKey);
-      for (let i = 0; i < q; i++) {
-        pool.push({ id: `pool-${skillKey}-${Date.now()+i}`, skillKey, skillNome: skill.nome, colore: skill.colore });
-      }
-      renderCantieri();
-      salvaSuStorage();
-      addAIMessage(`✅ Aggiunti ${q} ${skill.nome} al pool`, 'assistant');
-      return true;
-    }
-    
-    // Sposta a cantiere
-    const matchMoveTo = t.match(/(?:sposta|metti)\s+(\d+)\s+([a-z]+)\s+(?:a|in|su)\s+([a-z]+)/i);
-    if (matchMoveTo) {
-      const q = parseInt(matchMoveTo[1]);
-      const skillParola = matchMoveTo[2];
-      const cantiereParola = matchMoveTo[3];
-      
-      const skillKey = trovaSkillDaTesto(skillParola);
-      const cantiere = cantieri.find(c => c.nome.toLowerCase().includes(cantiereParola) || c.localita.toLowerCase().includes(cantiereParola));
-      
-      if (!skillKey || !cantiere) return false;
-      
-      const skill = SKILLS.find(s => s.key === skillKey);
-      let spostati = 0;
-      for (let i = 0; i < q; i++) {
-        const idx = pool.findIndex(op => op.skillKey === skillKey);
-        if (idx === -1) break;
-        cantiere.operai.push(pool[idx]);
-        pool.splice(idx, 1);
-        spostati++;
-      }
-      
-      renderCantieri();
-      salvaSuStorage();
-      addAIMessage(`✅ Spostati ${spostati} ${skill.nome} a ${cantiere.nome}`, 'assistant');
-      return true;
-    }
-    
-    // Riepilogo
-    if (t.includes('riepilogo') || t.includes('situazione')) {
-      let msg = '📊 RIEPILOGO\n\n';
-      msg += `Pool: ${pool.length} operai\n`;
-      cantieri.forEach(c => {
-        msg += `\n${c.nome}: ${c.operai.length} operai\n`;
-        const cnt = {};
-        c.operai.forEach(op => cnt[op.skillNome] = (cnt[op.skillNome]||0)+1);
-        Object.entries(cnt).forEach(([s,n]) => msg += `  • ${s}: ${n}\n`);
-      });
-      addAIMessage(msg, 'assistant');
-      return true;
-    }
-    
-    return false;
-  }
-
-  window.sendAIMessage = async function() {
-    const input = document.getElementById('aiInput');
-    const testo = input.value.trim();
-    if (!testo) return;
-    
-    addAIMessage(testo, 'user');
-    input.value = '';
-    
-    // Prova come comando
-    if (eseguiComandoAI(testo)) return;
-    
-    // Altrimenti chiama Groq
-    try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: 'Sei un assistente amichevole. Rispondi in italiano.' },
-            { role: 'user', content: testo }
-          ]
-        })
-      });
-      
-      const data = await response.json();
-      addAIMessage(data.choices[0].message.content, 'assistant');
-    } catch (error) {
-      addAIMessage('Errore di connessione a Groq', 'assistant');
-    }
-  };
-
-  // ==================== INIT ====================
- // ==================== AGENTE AUTOMATICO ====================
-let agenteAttivo = false;
-
-// Attiva/disattiva agente
-function toggleAgente() {
-  agenteAttivo = !agenteAttivo;
-  const status = agenteAttivo ? '✅ Agente attivo' : '⛔ Agente fermo';
-  document.getElementById('saveStatus').innerText = status;
+function addAIMessage(text, role) {
+  const container = document.getElementById('aiMessages');
+  const msg = document.createElement('div');
+  msg.className = `ai-message ${role}`;
+  msg.innerText = role === 'user' ? `🧑 ${text}` : `🤖 ${text}`;
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
 }
 
-// Funzione che analizza lo stato e decide azioni
-function agenteAnalizza() {
-  if (!agenteAttivo) return;
+// ==================== STATO PER L'AI ====================
+function getStatoAttuale() {
+  const poolCounts = getPoolCounts();
+  const cantieriInfo = cantieri.map(c => ({
+    id: c.id,
+    nome: c.nome,
+    localita: c.localita,
+    totaleOperai: c.operai.length,
+    breakdown: getCantiereCounts(c)
+  }));
 
-  // Copia dello stato corrente
-  const stato = {
-    cantieri: JSON.parse(JSON.stringify(cantieri)),
-    pool: JSON.parse(JSON.stringify(pool)),
-    skills: SKILLS.map(s => ({ key: s.key, nome: s.nome, colore: s.colore }))
+  return {
+    cantieri: cantieriInfo,
+    pool: poolCounts,
+    skillsDisponibili: SKILLS.map(s => ({ key: s.key, nome: s.nome }))
   };
-
-  // Esempio di strategia banale:
-  // sposta operai liberi nei cantieri con meno persone
-  for (let skill of stato.skills) {
-    const disponibili = pool.filter(op => op.skillKey === skill.key);
-    if (disponibili.length === 0) continue;
-
-    // Trova cantiere con meno operai totali
-    const cantiereVuoto = stato.cantieri.reduce((minC, c) => {
-      return c.operai.length < minC.operai.length ? c : minC;
-    }, stato.cantieri[0]);
-
-    if (!cantiereVuoto) continue;
-
-    // Numero di operai da spostare (1 alla volta)
-    const operaio = pool.find(op => op.skillKey === skill.key);
-    if (!operaio) continue;
-
-    // Esegui lo spostamento reale sui dati globali
-    const poolIdx = pool.findIndex(op => op.id === operaio.id);
-    if (poolIdx !== -1) {
-      pool.splice(poolIdx, 1);
-      cantiereVuoto.operai.push(operaio);
-      addAIMessage(`🤖 Agente ha spostato 1 ${skill.nome} a ${cantiereVuoto.nome}`, 'assistant');
-    }
-  }
-
-  // Aggiorna UI e salva
-  renderCantieri();
-  salvaSuStorage();
 }
 
-// Esecuzione ciclica agente (es. ogni 10 secondi)
-setInterval(() => {
-  agenteAnalizza();
-}, 10000);
+// ==================== ESECUZIONE AZIONI AI ====================
+window.eseguiAzioneAI = function(azione) {
+  if (!azione || !azione.tipo) return false;
 
-// Bottone per attivare agente manualmente
-const agenteBtn = document.createElement('button');
-agenteBtn.innerText = 'Autorizza agente';
-agenteBtn.style.marginLeft = '0.5rem';
-agenteBtn.style.padding = '0.3rem 0.6rem';
-agenteBtn.style.borderRadius = '20px';
-agenteBtn.style.border = 'none';
-agenteBtn.style.background = '#2563eb';
-agenteBtn.style.color = 'white';
-agenteBtn.style.cursor = 'pointer';
-agenteBtn.onclick = toggleAgente;
+  const { tipo, parametri = {} } = azione;
+  let eseguito = false;
+  let conferma = '';
 
-// Aggiungilo all'header
-document.querySelector('.app-header').appendChild(agenteBtn);
-  window.addEventListener('load', () => {
-    caricaDaStorage();
+  const trovaCantiere = (testo) => cantieri.find(c =>
+    c.id == testo ||
+    c.nome.toLowerCase().includes((testo || '').toLowerCase()) ||
+    c.localita.toLowerCase().includes((testo || '').toLowerCase())
+  );
+
+  const skillKey = trovaSkillDaTesto(parametri.mestiere) ||
+                   SKILLS.find(s => s.nome.toLowerCase() === (parametri.mestiere || '').toLowerCase())?.key;
+
+  switch (tipo) {
+    case 'aggiungi_al_pool':
+      if (skillKey) {
+        const sk = SKILLS.find(s => s.key === skillKey);
+        for (let i = 0; i < (parametri.quantita || 1); i++) {
+          pool.push({
+            id: `pool-${skillKey}-${Date.now() + i}`,
+            skillKey,
+            skillNome: sk.nome,
+            colore: sk.colore
+          });
+        }
+        eseguito = true;
+        conferma = `✅ Aggiunti ${parametri.quantita} ${sk.nome} al pool`;
+      }
+      break;
+
+    case 'sposta_da_pool_a_cantiere':
+      if (skillKey) {
+        const dest = trovaCantiere(parametri.cantiere);
+        if (dest) {
+          let spostati = 0;
+          for (let i = 0; i < (parametri.quantita || 1); i++) {
+            const idx = pool.findIndex(op => op.skillKey === skillKey);
+            if (idx === -1) break;
+            dest.operai.push(pool[idx]);
+            pool.splice(idx, 1);
+            spostati++;
+          }
+          eseguito = true;
+          conferma = `✅ Spostati ${spostati} ${SKILLS.find(s => s.key === skillKey).nome} a ${dest.nome}`;
+        }
+      }
+      break;
+
+    case 'sposta_da_cantiere_a_pool':
+      if (skillKey) {
+        const origine = trovaCantiere(parametri.cantiere);
+        if (origine) {
+          let spostati = 0;
+          for (let i = 0; i < (parametri.quantita || 1); i++) {
+            const idx = origine.operai.findIndex(op => op.skillKey === skillKey);
+            if (idx === -1) break;
+            pool.push(origine.operai[idx]);
+            origine.operai.splice(idx, 1);
+            spostati++;
+          }
+          eseguito = true;
+          conferma = `✅ Rimossi ${spostati} ${SKILLS.find(s => s.key === skillKey).nome} da ${origine.nome} e rimessi nel pool`;
+        }
+      }
+      break;
+
+    case 'sposta_tra_cantieri':
+      if (skillKey) {
+        const da = trovaCantiere(parametri.da_cantiere);
+        const a = trovaCantiere(parametri.a_cantiere);
+        if (da && a && da.id !== a.id) {
+          let spostati = 0;
+          for (let i = 0; i < (parametri.quantita || 1); i++) {
+            const idx = da.operai.findIndex(op => op.skillKey === skillKey);
+            if (idx === -1) break;
+            a.operai.push(da.operai[idx]);
+            da.operai.splice(idx, 1);
+            spostati++;
+          }
+          eseguito = true;
+          conferma = `✅ Trasferiti ${spostati} operai da ${da.nome} a ${a.nome}`;
+        }
+      }
+      break;
+
+    case 'rimuovi_da_pool':
+      if (skillKey) {
+        let rimossi = 0;
+        for (let i = 0; i < (parametri.quantita || 1); i++) {
+          const idx = pool.findIndex(op => op.skillKey === skillKey);
+          if (idx === -1) break;
+          pool.splice(idx, 1);
+          rimossi++;
+        }
+        eseguito = true;
+        conferma = `✅ Rimossi ${rimossi} operai dal pool`;
+      }
+      break;
+
+    case 'bilancia_cantieri':
+      // logica semplice: distribuisce gli operai liberi nei cantieri più vuoti
+      SKILLS.forEach(skill => {
+        let disponibili = pool.filter(op => op.skillKey === skill.key);
+        while (disponibili.length > 0) {
+          const menoPopolato = cantieri.reduce((min, c) =>
+            c.operai.length < min.operai.length ? c : min
+          );
+          const op = pool.find(p => p.skillKey === skill.key);
+          if (!op) break;
+          pool = pool.filter(p => p.id !== op.id);
+          menoPopolato.operai.push(op);
+          disponibili = pool.filter(p => p.skillKey === skill.key);
+        }
+      });
+      eseguito = true;
+      conferma = `✅ Cantieri bilanciati automaticamente!`;
+      break;
+
+    case 'riepilogo_dettagliato':
+      // l’AI lo mette già nel campo "testo", quindi qui non serve
+      break;
+  }
+
+  if (eseguito) {
     renderCantieri();
-    
-    document.getElementById('aiInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendAIMessage();
+    salvaSuStorage();
+    // mostra conferma extra se l'AI non l'ha già messa
+    if (conferma) addAIMessage(conferma, 'assistant');
+  }
+
+  return eseguito;
+};
+
+// ==================== INVIO MESSAGGIO (nuova versione) ====================
+window.sendAIMessage = async function() {
+  const input = document.getElementById('aiInput');
+  const testoUtente = input.value.trim();
+  if (!testoUtente) return;
+
+  addAIMessage(testoUtente, 'user');
+  input.value = '';
+
+  const stato = getStatoAttuale();
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'system',
+            content: `Sei l'assistente AI integrato in "CANTIERI · GESTIONE OPERAI".
+
+STATO ATTUALE DELL'APP (JSON):
+${JSON.stringify(stato)}
+
+REGOLE STRETTISSIME (rispettale sempre):
+Rispondi SEMPRE e SOLO con un JSON valido esattamente così (niente testo fuori, niente markdown):
+
+{
+  "testo": "Il messaggio che l'utente vedrà (in italiano, amichevole e chiaro - descrivi cosa hai fatto se hai eseguito un'azione)",
+  "azione": null  oppure  { "tipo": "nome_azione", "parametri": { ... } }
+}
+
+Azioni supportate:
+- "aggiungi_al_pool"          → parametri: {"quantita": 5, "mestiere": "Montatori"}
+- "sposta_da_pool_a_cantiere" → {"quantita": 3, "mestiere": "Saldatori", "cantiere": "Stazione MM"}
+- "sposta_da_cantiere_a_pool" → {"quantita": 2, "mestiere": "Elettricisti", "cantiere": "Deposito AT"}
+- "sposta_tra_cantieri"       → {"quantita": 4, "mestiere": "Manovali", "da_cantiere": "Genova", "a_cantiere": "Milano"}
+- "rimuovi_da_pool"           → {"quantita": 1, "mestiere": "Posatori"}
+- "bilancia_cantieri"         → {}
+- "riepilogo_dettagliato"     → {}   (puoi anche mettere tutto nel campo "testo")
+
+Se è solo una chiacchierata, metti "azione": null.`
+          },
+          { role: 'user', content: testoUtente }
+        ]
+      })
     });
-  });
+
+    const data = await response.json();
+    let content = data.choices[0].message.content.trim();
+
+    let rispostaAI;
+    try {
+      rispostaAI = JSON.parse(content);
+    } catch (e) {
+      rispostaAI = { testo: content, azione: null };
+    }
+
+    // Mostra il messaggio
+    addAIMessage(rispostaAI.testo, 'assistant');
+
+    // Esegui azione se presente
+    if (rispostaAI.azione && rispostaAI.azione.tipo) {
+      eseguiAzioneAI(rispostaAI.azione);
+    }
+
+  } catch (error) {
+    addAIMessage('❌ Errore di connessione a Groq', 'assistant');
+  }
+};
+
+// ==================== FINE SEZIONE CHAT AI ====================
 </script>
-</body>
-</html>
